@@ -39,12 +39,12 @@ generate_coef <- function(lm_fit) {
 print_model_output <- function(lm_fit, 
                                model_output_file='model_output.txt') {
   sink(model_output_file)
-  cat('COEFFICIENTS:\n')
+  cat('COEFFICIENTS:\n\n')
   cat(paste0(coef(lm_fit), sep='\n'))
   cat('\n\n')
-  cat('ANOVA:\n')
+  cat('ANOVA:\n\n')
   print(anova(lm_fit))
-  cat('SUMMARY:\n')
+  cat('SUMMARY:\n\n')
   print(summary(lm_fit))
   sink()
 }
@@ -87,4 +87,4 @@ run <- function() {
 
 run()
 
-Income ~ Age ~ Marital Occupation', 'Education','Hours'
+Income ~ Age + Marital Occupation + Education + Hours
