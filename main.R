@@ -10,11 +10,13 @@
 # Run the following from the R console:
 #   source('main.R')
 # 
-# EXTRA: To test the output from the R linear models vs the output from the 
-# C routines, uncomment the code at the bottom of this file and run the 
-# command above.
+# EXTRA: The code works both on Windows 7 64-bit and 
+# Debian Release 7.5 (wheezy) 64-bit.  To test the 
+# output from the R linear models vs the output from the 
+# C routines, uncomment the code at the bottom of this 
+# file and run the command above. The testing code has 
+# only been successfully run in Windows 7 64-bit.
 ############################################################################
-
 
 r2c  <- function(x) {
   type_pairs <-list(C=c('int',    'double', 'char *',   'bool',   'char *'),
@@ -59,13 +61,13 @@ generate_c_model_function <- function(fields, coefficients, routine_name, types)
   cat(sprintf('}\n\n'))
 }
 
-print_c_term_if_statement <- function(term_name, coef) {
-  for(i in 1:length(coef)) {
+print_c_term_if_statement <- function(term_name, term_coef) {
+  for(i in 1:length(term_coef)) {
     cat(sprintf('  '))
     if(i > 1)
       cat(sprintf('else '))
-    cat(sprintf('if(strcmp(%s, "%s")==0) {\n', term_name, names(coef)[i]))
-    cat(sprintf('    term = %s;\n', coef[i]))
+    cat(sprintf('if(strcmp(%s, "%s")==0) {\n', term_name, names(term_coef)[i]))
+    cat(sprintf('    term = %s;\n', term_coef[i]))
     cat(sprintf('  }\n'))
   }
   cat(sprintf('  else {\n'))
@@ -74,11 +76,11 @@ print_c_term_if_statement <- function(term_name, coef) {
 }
 
 # term_name: lower case name of the categorical variable
-# coef: named vector of coefficients for categorical variable
-generate_c_term_function <- function(term_name='gender', coef=c(MALE=1)) {
+# term_coef: named vector of coefficients for categorical variable
+generate_c_term_function <- function(term_name='gender', term_coef) {
   cat(sprintf('double %s_term(char *%s) {\n', term_name, term_name))
   cat(sprintf('  double term;\n'))
-  print_c_term_if_statement(term_name, coef)
+  print_c_term_if_statement(term_name, term_coef)
   cat(sprintf('  return(term);\n'))
   cat(sprintf('}\n\n'))
 }
@@ -178,7 +180,7 @@ generate_c_file <- function(routine_name, lm_fit, types) {
     if(length(clean_cf$categorical)>0) {
       for(i in 1:length(clean_cf$categorical)) {
         generate_c_term_function(tolower(names(clean_cf$categorical)[i]),
-                                 coef=clean_cf$categorical[[i]])
+                                 term_coef=clean_cf$categorical[[i]])
       }
     }
     generate_c_model_function(all_fields, clean_cf, routine_name, types)
@@ -254,30 +256,30 @@ par_sets <- list( A=list(x=c('Age', 'Employment', 'Gender', 'Income'),
 
 run(par_sets)
 
-########################################
-# UNCOMMENT THE CODE BELOW FOR TESTING #
-########################################
 
-# system('gcc model_hours.c -o model_hours.exe')
-# system('gcc model_income.c -o model_income.exe')
-# 
-# audit_data  <- read.csv('audit.csv', stringsAsFactors = T)
-# 
-# test_data <- list(A=data.frame(Age=45, Income=89000, Employment='Private', Gender='Male', stringsAsFactors=F),
-#                   B=data.frame(Age=34, Hours=42, Marital='Unmarried', Occupation='Executive', Education='College', stringsAsFactors=F))
-# 
-# cat('\n\n')
-# cat('=================\n')
-# cat('First Model\n')
-# cat('=================\n')
-# system(paste('model_hours', paste(test_data[[1]], collapse=' ')))
-# lm_fit    <- fit_lm(audit_data, par_sets[[1]])
-# cat('R Prediction: ', predict(lm_fit, test_data[[1]]), '\n')
-# cat('\n\n')
-# cat('=================\n')
-# cat('Second Model\n')
-# cat('=================\n')
-# system(paste('model_income', paste(test_data[[2]], collapse=' ')))
-# lm_fit    <- fit_lm(audit_data, par_sets[[2]])
-# cat('R Prediction:', predict(lm_fit, test_data[[2]]), '\n')
-# cat('\n\n')
+#########################################################
+# UNCOMMENT THE CODE BELOW FOR TESTING (WINDOWS 7 ONLY) #
+#########################################################
+system('gcc model_hours.c -o model_hours.exe')
+system('gcc model_income.c -o model_income.exe')
+
+audit_data  <- read.csv('audit.csv', stringsAsFactors = T)
+
+test_data <- list(A=data.frame(Age=45, Income=89000, Employment='Private', Gender='Male', stringsAsFactors=F),
+                  B=data.frame(Age=34, Hours=42, Marital='Unmarried', Occupation='Executive', Education='College', stringsAsFactors=F))
+
+cat('\n\n')
+cat('=================\n')
+cat('First Model\n')
+cat('=================\n')
+system(paste('model_hours', paste(test_data[[1]], collapse=' ')))
+lm_fit    <- fit_lm(audit_data, par_sets[[1]])
+cat('R Prediction: ', predict(lm_fit, test_data[[1]]), '\n')
+cat('\n\n')
+cat('=================\n')
+cat('Second Model\n')
+cat('=================\n')
+system(paste('model_income', paste(test_data[[2]], collapse=' ')))
+lm_fit    <- fit_lm(audit_data, par_sets[[2]])
+cat('R Prediction:', predict(lm_fit, test_data[[2]]), '\n')
+cat('\n\n')

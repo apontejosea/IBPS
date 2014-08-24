@@ -1,0 +1,124 @@
+==============
+MODEL FORMULA:
+==============
+
+Income ~ Age + Marital + Occupation + Education + Hours
+
+
+=============
+COEFFICIENTS:
+=============
+
+$categorical
+$categorical$Marital
+             Divorced               Married Married-spouse-absent 
+            20019.716            -38234.979              2882.260 
+            Unmarried               Widowed 
+            14650.112              4589.211 
+
+$categorical$Occupation
+     Cleaner     Clerical    Executive      Farming         Home    Machinist 
+   3154.6681   15216.5768   -4647.2250    2328.1871   -1459.3674    4982.1665 
+    Military Professional   Protective       Repair        Sales      Service 
+  -6197.9085    5826.9513  -10645.7041  -15677.3834    -855.9717    3740.4745 
+     Support    Transport 
+   2874.8838  -17406.6081 
+
+$categorical$Education
+    Bachelor      College    Doctorate       HSgrad       Master    Preschool 
+ -18555.9619   -9719.1401  -26879.9429   -6760.9162  -23420.8431  -40984.9027 
+Professional   Vocational         Yr10         Yr11         Yr12        Yr1t4 
+  -8609.3177  -16877.8365  -19317.5694  -11009.2375   -3205.0879  -38931.3405 
+       Yr5t6        Yr7t8          Yr9 
+   -917.2847    6943.4436   12546.4633 
+
+
+$numerical
+$numerical$Age
+[1] -685.154
+
+$numerical$Hours
+[1] -744.1738
+
+
+$intercept
+[1] 166276.2
+
+
+
+========
+SUMMARY:
+========
+
+
+Call:
+lm(formula = txt_formula, data = dataset)
+
+Residuals:
+    Min      1Q  Median      3Q     Max 
+-120647  -34866  -12126   14381  425373 
+
+Coefficients:
+                             Estimate Std. Error t value Pr(>|t|)    
+(Intercept)                  166276.2    11477.4  14.487  < 2e-16 ***
+Age                            -685.2      128.5  -5.330 1.09e-07 ***
+MaritalDivorced               20019.7     4895.4   4.090 4.50e-05 ***
+MaritalMarried               -38235.0     3798.0 -10.067  < 2e-16 ***
+MaritalMarried-spouse-absent   2882.3    13590.8   0.212   0.8321    
+MaritalUnmarried              14650.1     8006.3   1.830   0.0674 .  
+MaritalWidowed                 4589.2     9240.8   0.497   0.6195    
+OccupationCleaner              3154.7     9040.0   0.349   0.7272    
+OccupationClerical            15216.6     7472.1   2.036   0.0418 *  
+OccupationExecutive           -4647.2     7409.1  -0.627   0.5306    
+OccupationFarming              2328.2    10450.8   0.223   0.8237    
+OccupationHome                -1459.4    28254.7  -0.052   0.9588    
+OccupationMachinist            4982.2     8268.4   0.603   0.5469    
+OccupationMilitary            -6197.9    61620.2  -0.101   0.9199    
+OccupationProfessional         5827.0     7774.7   0.749   0.4537    
+OccupationProtective         -10645.7    11563.4  -0.921   0.3574    
+OccupationRepair             -15677.4     7617.3  -2.058   0.0397 *  
+OccupationSales                -856.0     7646.7  -0.112   0.9109    
+OccupationService              3740.5     7555.9   0.495   0.6206    
+OccupationSupport              2874.9    10858.4   0.265   0.7912    
+OccupationTransport          -17406.6     8806.9  -1.976   0.0482 *  
+EducationBachelor            -18556.0     8177.3  -2.269   0.0234 *  
+EducationCollege              -9719.1     7982.9  -1.218   0.2236    
+EducationDoctorate           -26879.9    14388.3  -1.868   0.0619 .  
+EducationHSgrad               -6760.9     7855.5  -0.861   0.3895    
+EducationMaster              -23420.8     9862.1  -2.375   0.0177 *  
+EducationPreschool           -40984.9    26482.8  -1.548   0.1219    
+EducationProfessional         -8609.3    14892.3  -0.578   0.5633    
+EducationVocational          -16877.8     9967.5  -1.693   0.0906 .  
+EducationYr10                -19317.6    11115.6  -1.738   0.0824 .  
+EducationYr11                -11009.2    10498.6  -1.049   0.2945    
+EducationYr12                 -3205.1    16760.0  -0.191   0.8484    
+EducationYr1t4               -38931.3    26255.5  -1.483   0.1383    
+EducationYr5t6                 -917.3    15049.6  -0.061   0.9514    
+EducationYr7t8                 6943.4    13016.7   0.533   0.5938    
+EducationYr9                  12546.5    14075.4   0.891   0.3728    
+Hours                          -744.2      121.6  -6.120 1.13e-09 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 61210 on 1963 degrees of freedom
+Multiple R-squared:  0.241,	Adjusted R-squared:  0.2271 
+F-statistic: 17.32 on 36 and 1963 DF,  p-value: < 2.2e-16
+
+======
+ANOVA:
+======
+
+Analysis of Variance Table
+
+Response: Income
+             Df     Sum Sq    Mean Sq  F value    Pr(>F)    
+Age           1 4.9871e+11 4.9871e+11 133.1205 < 2.2e-16 ***
+Marital       5 1.4044e+12 2.8088e+11  74.9746 < 2.2e-16 ***
+Occupation   14 1.9857e+11 1.4183e+10   3.7859 2.350e-06 ***
+Education    15 9.3554e+10 6.2369e+09   1.6648   0.05135 .  
+Hours         1 1.4031e+11 1.4031e+11  37.4526 1.128e-09 ***
+Residuals  1963 7.3540e+12 3.7463e+09                       
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
