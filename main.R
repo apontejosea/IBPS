@@ -1,3 +1,21 @@
+############################################################################
+# Author: Jose Aponte
+# Email:  apontejosea@gmail.com
+# Test:   Translating R Results to a C Routine
+# Date:   8/24/2014
+#
+# ============
+# INSTRUCTIONS
+# ============
+# Run the following from the R console:
+#   source('main.R')
+# 
+# EXTRA: To test the output from the R linear models vs the output from the 
+# C routines, uncomment the code at the bottom of this file and run the 
+# command above.
+############################################################################
+
+
 r2c  <- function(x) {
   type_pairs <-list(C=c('int',    'double', 'char *',   'bool',   'char *'),
                     R=c('integer','numeric','character','logical','factor'))
@@ -8,13 +26,17 @@ c_type <- function(dataset) {
   unlist(lapply(head(dataset, 1), function(x) r2c(class(x))))
 }
 
-#TODO: ...
-print_c_formula <- function(coef)  {
+print_c_formula <- function(clean_cf)  {
   num_coef <- paste(toupper(names(clean_cf$numerical)), 'COEF * (double)', sep='_')
   part_1   <- paste(paste0(num_coef, tolower(names(clean_cf$numerical))), collapse=' + ')
   cat_coef <- paste0(tolower(names(clean_cf$categorical)))
   part_2   <- paste(paste0(cat_coef, '_term(', cat_coef, ')'), collapse=' + ')
-  cat('\n  return(', paste0(part_1, ' +\n    ', part_2, ');\n'))
+  intercept <- ''
+  if(!is.null(clean_cf$intercept)) {
+    intercept  <- clean_cf$intercept
+  }
+  full_formula <- paste(part_1, part_2, intercept, sep=' +\n    ')
+  cat('\n  return(', full_formula, ');\n')
 }
 
 parameters_string <- function(var_names, types) {
@@ -23,10 +45,8 @@ parameters_string <- function(var_names, types) {
   parameters
 }
 
-generate_c_model_function <- function(coefficients, routine_name, types) {
-  var_names  <- c(names(coefficients$numerical), 
-                  names(coefficients$categorical))
-  param_str  <- parameters_string(var_names, types)
+generate_c_model_function <- function(fields, coefficients, routine_name, types) {
+  param_str  <- parameters_string(fields, types[fields])
 
   cat(sprintf('double %s(%s) {\n\n', routine_name, param_str))
 
@@ -36,15 +56,7 @@ generate_c_model_function <- function(coefficients, routine_name, types) {
 
   print_c_formula(coefficients)
 
-  # cat(sprintf('  // JUST FOR DEBUGGING\n'))
-  # cat(sprintf('  printf("Gender is: %s\n", gender);\n'))
-  # cat(sprintf('  printf("Employment is: %s\n", employment);\n'))
-  # cat(sprintf('  printf("AGE_COEF: %4.5f\n", AGE_COEF);\n'))
-  # cat(sprintf('  printf("INCOME_COEF: %4.5f\n", INCOME_COEF);\n'))
-  # cat(sprintf('  printf("Gender term: %4.5f\n", gender_term(gender));\n'))
-  # cat(sprintf('  printf("Employment term: %4.5f\n", employment_term(employment));\n'))
-  # cat(sprintf('  // END OF DEBUGGING CODE\n'))
-  cat(sprintf('}\n'))
+  cat(sprintf('}\n\n'))
 }
 
 print_c_term_if_statement <- function(term_name, coef) {
@@ -73,7 +85,7 @@ generate_c_term_function <- function(term_name='gender', coef=c(MALE=1)) {
 
 # Returns a list of coefficient splitted by type: 
 #  categorical variables, numerical variables & intercept (if any)
-# output: list(Gender=list(MALE=1.2),
+# Example output: list(Gender=list(MALE=1.2),
 #             Employment=list(Private=3.4,PSLocal=5.5, ...))
 clean_coef <- function(lm_fit) {
   contrasts     <- names(attr(qr(lm_fit)$qr, 'contrasts'))
@@ -101,18 +113,51 @@ clean_coef <- function(lm_fit) {
   result
 }
 
-#TODO: add void to all meta functions
-#TODO: finalize
+print_c_main_dynamic_statements <- function(fields, types, routine_name) {
+  num_args   <- length(fields)
+  fields_lc  <- tolower(fields)
+  cat(paste0('  if(argc == ', num_args+1, ') {\n'))
+  types <- types[fields]
+  for(i in 1:length(fields)) {
+    statement <- 
+      switch(types[i], 
+             'int'    = paste0(fields_lc[i], ' = atoi(argv[', i, ']);'),
+             'double' = paste0('sscanf(argv[',i,'],"%lf",&',fields_lc[i],');'),
+             'char *' = paste0(fields_lc[i], ' = argv[',i,'];'))
+    cat(paste0('    ', statement, '\n'))
+  }
+  cat('  }\n')
+  cat('else {\n')
+  cat('  printf("Wrong number of arguments.\\n");\n')
+  cat('  return;\n')
+  cat('}\n\n')
+
+  cat('  printf("Input:\\n");\n')
+  cat('  printf("------\\n");\n')
+  for(i in 1:length(fields)) {
+    out_format <- switch(types[i], 
+                         'int'='%1i', 'double'='%4.5f', 'char *'='%s')
+    cat(paste0('  printf("', fields[i], ': ', 
+               out_format, '\\n", ', tolower(fields[i]), ');\n'))
+  }
+
+  cat('  printf("\\nOutput:\\n");\n')
+  cat('  printf("------\\n");\n')
+  cat(paste0('  printf("Prediction from ', routine_name, ': %4.5f\\n", ', 
+             routine_name, '(', paste(tolower(fields), collapse=', '), '));\n'))
+
+}
+
 generate_c_main_function <- function(fields, routine_name, types) {
-  # cat_fields <- names(clean_cf$categorical)
-  # num_fields <- names(clean_cf$numerical)
-  # all_fields <- c(num_fields, cat_fields)
   param_str  <- parameters_string(fields, types[fields])
     
+  # browser()
   cat('// For testing purposes\n')
-  cat(paste0('void main(', param_str, ') {\n'))
-  cat(paste0('  printf("%4.5f", ', routine_name, '(', 
-             paste(tolower(fields), collapse=', '), '));\n'))
+  cat('void main(int argc, char *argv[]) {\n\n')
+  cat(paste0('  ', paste0(types[fields], ' ', tolower(fields), ';'), 
+             collapse='\n'))
+  cat('\n\n')
+  print_c_main_dynamic_statements(fields, types, routine_name)
   cat('}')
 }
 
@@ -125,8 +170,6 @@ generate_c_file <- function(routine_name, lm_fit, types) {
   num_fields   <- names(clean_cf$numerical)
   cat_fields   <- names(clean_cf$categorical)
   all_fields   <- c(num_fields, cat_fields)
-  # routine_name <- paste0('model_', tolower(field_names$y))
-  # types        <- c_type(dataset[1, field_names$x])[all_fields]
 
   tryCatch({
     sink(paste0(routine_name, '.c'))
@@ -138,7 +181,7 @@ generate_c_file <- function(routine_name, lm_fit, types) {
                                  coef=clean_cf$categorical[[i]])
       }
     }
-    generate_c_model_function(clean_cf, routine_name, types)
+    generate_c_model_function(all_fields, clean_cf, routine_name, types)
     generate_c_main_function(all_fields, routine_name, types)
     sink() 
     }, error=function(e) {
@@ -147,19 +190,32 @@ generate_c_file <- function(routine_name, lm_fit, types) {
   })
 }
 
-# TODO: file names should be dynamic
-# TODO: make function name consistent with others
-print_model_output <- function(lm_fit, routine_name) {
+generate_model_output <- function(lm_fit, routine_name) {
   model_output_file <- paste0(routine_name,'.txt')
   tryCatch({
     sink(model_output_file)
-      cat('COEFFICIENTS:\n\n')
-      cat(paste0(coef(lm_fit), sep='\n'))
+      cat('==============\n')
+      cat('MODEL FORMULA:\n')
+      cat('==============\n\n')
+      print(formula(lm_fit), showEnv=F)
       cat('\n\n')
-      cat('ANOVA:\n\n')
-      print(anova(lm_fit))
-      cat('SUMMARY:\n\n')
+
+      cat('=============\n')
+      cat('COEFFICIENTS:\n')
+      cat('=============\n\n')
+      print(clean_coef(lm_fit))
+      cat('\n\n')
+
+      cat('========\n')
+      cat('SUMMARY:\n')
+      cat('========\n\n')
       print(summary(lm_fit))
+
+      cat('======\n')
+      cat('ANOVA:\n')
+      cat('======\n\n')
+      print(anova(lm_fit))
+      cat('\n\n')
     sink()
   }, error = function(e) {
     print(e)
@@ -173,13 +229,13 @@ fit_lm  <- function(dataset, field_names) {
   return(lm(txt_formula, data=dataset))
 }
 
-# TODO: Any preferred way to name the C routines?
-# I'm thinking model_<datafilename>_<dependentvar>.c
 generate_model_routine <- function(data_file, field_names) {
   dataset   <- read.csv(data_file, stringsAsFactors = T)
   lm_fit    <- fit_lm(dataset, field_names)
+
+  types <- c_type(dataset[1,field_names$x])
   routine_name <- paste0('model_', tolower(field_names$y))
-  print_model_output(lm_fit, routine_name)
+  generate_model_output(lm_fit, routine_name)
   generate_c_file(routine_name, lm_fit, types)
 }
 
@@ -197,3 +253,29 @@ par_sets <- list( A=list(x=c('Age', 'Employment', 'Gender', 'Income'),
                          y='Income'))
 
 run(par_sets)
+
+########################################
+# UNCOMMENT THE CODE BELOW FOR TESTING #
+########################################
+
+# system('gcc model_hours.c -o model_hours.exe')
+# system('gcc model_income.c -o model_income.exe')
+# 
+# test_data <- list(A=data.frame(Age=34, Income=89000, Employment='Private', Gender='Male', stringsAsFactors=F),
+#                   B=data.frame(Age=34, Hours=42, Marital='Unmarried', Occupation='Executive', Education='College', stringsAsFactors=F))
+# 
+# cat('\n\n')
+# cat('=================\n')
+# cat('First Model\n')
+# cat('=================\n')
+# system(paste('model_hours', paste(test_data[[1]], collapse=' ')))
+# lm_fit    <- fit_lm(audit_data, par_sets[[1]])
+# cat('R Prediction: ', predict(lm_fit, test_data[[1]]), '\n')
+# cat('\n\n')
+# cat('=================\n')
+# cat('Second Model\n')
+# cat('=================\n')
+# system(paste('model_income', paste(test_data[[2]], collapse=' ')))
+# lm_fit    <- fit_lm(audit_data, par_sets[[2]])
+# cat('R Prediction:', predict(lm_fit, test_data[[2]]), '\n')
+# cat('\n\n')
