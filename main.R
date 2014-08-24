@@ -103,14 +103,16 @@ clean_coef <- function(lm_fit) {
 
 #TODO: add void to all meta functions
 #TODO: finalize
-generate_c_main_function <- function(clean_cf, routine_name, types) {
-  cat_fields <- names(clean_cf$categorical)
-  num_fields <- names(clean_cf$numerical)
-  param_str  <- parameters_string(c(cat_fields, num_fields), types)
+generate_c_main_function <- function(fields, routine_name, types) {
+  # cat_fields <- names(clean_cf$categorical)
+  # num_fields <- names(clean_cf$numerical)
+  # all_fields <- c(num_fields, cat_fields)
+  param_str  <- parameters_string(fields, types[fields])
     
   cat('// For testing purposes\n')
-  cat(paste0('void main(', param_str, ', ) {\n'))
-  cat(paste0('  printf("%4.5f", ', routine_name, '(', param_str, '));\n'))
+  cat(paste0('void main(', param_str, ') {\n'))
+  cat(paste0('  printf("%4.5f", ', routine_name, '(', 
+             paste(tolower(fields), collapse=', '), '));\n'))
   cat('}')
 }
 
@@ -118,14 +120,18 @@ r_class <- function(dataset) {
   unlist(lapply(head(dataset, 1), function(x) class(x)))
 }
 
-generate_c_file <- function(field_names, lm_fit, dataset) {
+generate_c_file <- function(routine_name, lm_fit, types) {
   clean_cf     <- clean_coef(lm_fit)
-  routine_name <- paste0('model_', tolower(field_names$y))
-  types        <- c_type(dataset[1, field_names$x])
+  num_fields   <- names(clean_cf$numerical)
+  cat_fields   <- names(clean_cf$categorical)
+  all_fields   <- c(num_fields, cat_fields)
+  # routine_name <- paste0('model_', tolower(field_names$y))
+  # types        <- c_type(dataset[1, field_names$x])[all_fields]
 
-  browser()
-  # tryCatch({
+  tryCatch({
     sink(paste0(routine_name, '.c'))
+    cat(sprintf('#include<stdio.h>\n'))
+    cat(sprintf('#include<string.h>\n\n\n'))
     if(length(clean_cf$categorical)>0) {
       for(i in 1:length(clean_cf$categorical)) {
         generate_c_term_function(tolower(names(clean_cf$categorical)[i]),
@@ -133,33 +139,35 @@ generate_c_file <- function(field_names, lm_fit, dataset) {
       }
     }
     generate_c_model_function(clean_cf, routine_name, types)
-    generate_c_main_function(clean_cf, routine_name, types)
+    generate_c_main_function(all_fields, routine_name, types)
     sink() 
-    # }, error=function(e) {
-    #   sink()
-    #   cat(print(e))
-    # })
+    }, error=function(e) {
+      sink()
+      cat(print(e))
+  })
 }
 
 # TODO: file names should be dynamic
 # TODO: make function name consistent with others
-print_model_output <- function(lm_fit, 
-                               model_output_file='model_output.txt') {
-  sink(model_output_file)
-    cat('COEFFICIENTS:\n\n')
-    cat(paste0(coef(lm_fit), sep='\n'))
-    cat('\n\n')
-    cat('ANOVA:\n\n')
-    print(anova(lm_fit))
-    cat('SUMMARY:\n\n')
-    print(summary(lm_fit))
-  sink()
+print_model_output <- function(lm_fit, routine_name) {
+  model_output_file <- paste0(routine_name,'.txt')
+  tryCatch({
+    sink(model_output_file)
+      cat('COEFFICIENTS:\n\n')
+      cat(paste0(coef(lm_fit), sep='\n'))
+      cat('\n\n')
+      cat('ANOVA:\n\n')
+      print(anova(lm_fit))
+      cat('SUMMARY:\n\n')
+      print(summary(lm_fit))
+    sink()
+  }, error = function(e) {
+    print(e)
+    sink()
+  })
 }
 
-# TODO: remove defaults at the end
-fit_lm  <- function(dataset, 
-                    field_names=list(x=c('Age', 'Employment',
-                                        'Gender', 'Income'), y='Hours')) {
+fit_lm  <- function(dataset, field_names) {
   txt_formula<- paste(field_names$y, '~',
                       paste0(field_names$x, collapse='+'))
   return(lm(txt_formula, data=dataset))
@@ -170,8 +178,9 @@ fit_lm  <- function(dataset,
 generate_model_routine <- function(data_file, field_names) {
   dataset   <- read.csv(data_file, stringsAsFactors = T)
   lm_fit    <- fit_lm(dataset, field_names)
-  print_model_output(lm_fit)
-  generate_c_file(field_names, lm_fit, dataset)
+  routine_name <- paste0('model_', tolower(field_names$y))
+  print_model_output(lm_fit, routine_name)
+  generate_c_file(routine_name, lm_fit, types)
 }
 
 run <- function(model_par_sets) {
