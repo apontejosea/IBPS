@@ -261,7 +261,9 @@ run(par_sets)
 # system('gcc model_hours.c -o model_hours.exe')
 # system('gcc model_income.c -o model_income.exe')
 # 
-# test_data <- list(A=data.frame(Age=34, Income=89000, Employment='Private', Gender='Male', stringsAsFactors=F),
+# audit_data  <- read.csv('audit.csv', stringsAsFactors = T)
+# 
+# test_data <- list(A=data.frame(Age=45, Income=89000, Employment='Private', Gender='Male', stringsAsFactors=F),
 #                   B=data.frame(Age=34, Hours=42, Marital='Unmarried', Occupation='Executive', Education='College', stringsAsFactors=F))
 # 
 # cat('\n\n')
